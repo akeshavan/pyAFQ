@@ -1,0 +1,536 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>AFQ.segmentation &#8212; AFQ 0.1 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/gallery.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/autoapi.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for AFQ.segmentation</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">distutils.version</span> <span class="k">import</span> <span class="n">LooseVersion</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">scipy.spatial.distance</span> <span class="k">import</span> <span class="n">mahalanobis</span><span class="p">,</span> <span class="n">cdist</span>
+
+<span class="kn">import</span> <span class="nn">nibabel</span> <span class="k">as</span> <span class="nn">nib</span>
+
+<span class="kn">import</span> <span class="nn">dipy</span>
+<span class="kn">import</span> <span class="nn">dipy.data</span> <span class="k">as</span> <span class="nn">dpd</span>
+<span class="kn">import</span> <span class="nn">dipy.tracking.streamline</span> <span class="k">as</span> <span class="nn">dts</span>
+<span class="kn">import</span> <span class="nn">dipy.tracking.streamlinespeed</span> <span class="k">as</span> <span class="nn">dps</span>
+
+<span class="kn">import</span> <span class="nn">AFQ.registration</span> <span class="k">as</span> <span class="nn">reg</span>
+<span class="kn">import</span> <span class="nn">AFQ.utils.models</span> <span class="k">as</span> <span class="nn">ut</span>
+<span class="kn">import</span> <span class="nn">AFQ.utils.volume</span> <span class="k">as</span> <span class="nn">auv</span>
+<span class="kn">import</span> <span class="nn">AFQ._fixes</span> <span class="k">as</span> <span class="nn">fix</span>
+
+<span class="k">if</span> <span class="n">LooseVersion</span><span class="p">(</span><span class="n">dipy</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span> <span class="o">&lt;</span> <span class="s1">&#39;0.12&#39;</span><span class="p">:</span>
+    <span class="c1"># Monkey patch the fix in:</span>
+    <span class="n">dts</span><span class="o">.</span><span class="n">orient_by_rois</span> <span class="o">=</span> <span class="n">fix</span><span class="o">.</span><span class="n">orient_by_rois</span>
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;segment&quot;</span><span class="p">]</span>
+
+
+<span class="k">def</span> <span class="nf">_resample_bundle</span><span class="p">(</span><span class="n">streamlines</span><span class="p">,</span> <span class="n">n_points</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">dps</span><span class="o">.</span><span class="n">set_number_of_points</span><span class="p">(</span><span class="n">streamlines</span><span class="p">,</span> <span class="n">n_points</span><span class="p">))</span>
+
+
+<span class="k">def</span> <span class="nf">calculate_tract_profile</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">streamlines</span><span class="p">,</span> <span class="n">affine</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">n_points</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+                            <span class="n">weights</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    img : 3D volume</span>
+
+<span class="sd">    streamlines : list of arrays, or array</span>
+
+<span class="sd">    weights : 1D array or 2D array (optional)</span>
+<span class="sd">        Weight each streamline (1D) or each node (2D) when calculating the</span>
+<span class="sd">        tract-profiles. Must sum to 1 across streamlines (in each node if</span>
+<span class="sd">        relevant).</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># It&#39;s already an array</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">streamlines</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+        <span class="n">fgarray</span> <span class="o">=</span> <span class="n">streamlines</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># It&#39;s some other kind of thing (list, Streamlines, etc.).</span>
+        <span class="c1"># Resample each streamline to the same number of points</span>
+        <span class="c1"># list =&gt; np.array</span>
+        <span class="c1"># Setting the number of points should happen in a streamline template</span>
+        <span class="c1"># space, rather than in the subject native space, but for now we do</span>
+        <span class="c1"># everything as in the Matlab version -- in native space.</span>
+        <span class="c1"># In the future, an SLR object can be passed here, and then it would</span>
+        <span class="c1"># move these streamlines into the template space before resampling...</span>
+        <span class="n">fgarray</span> <span class="o">=</span> <span class="n">_resample_bundle</span><span class="p">(</span><span class="n">streamlines</span><span class="p">,</span> <span class="n">n_points</span><span class="p">)</span>
+    <span class="c1"># ...and move them back to native space before indexing into the volume:</span>
+    <span class="n">values</span> <span class="o">=</span> <span class="n">dts</span><span class="o">.</span><span class="n">values_from_volume</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">fgarray</span><span class="p">,</span> <span class="n">affine</span><span class="o">=</span><span class="n">affine</span><span class="p">)</span>
+
+    <span class="c1"># We assume that weights *always sum to 1 across streamlines*:</span>
+    <span class="k">if</span> <span class="n">weights</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">weights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">values</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">/</span> <span class="n">values</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="n">tract_profile</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">weights</span> <span class="o">*</span> <span class="n">values</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">tract_profile</span>
+
+
+<span class="k">def</span> <span class="nf">gaussian_weights</span><span class="p">(</span><span class="n">bundle</span><span class="p">,</span> <span class="n">n_points</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">return_mahalnobis</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate weights for each streamline/node in a bundle, based on a</span>
+<span class="sd">    Mahalanobis distance from the mean of the bundle, at that node</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    bundle : array or list</span>
+<span class="sd">        If this is a list, assume that it is a list of streamline coordinates</span>
+<span class="sd">        (each entry is a 2D array, of shape n by 3). If this is an array, this</span>
+<span class="sd">        is a resampled version of the streamlines, with equal number of points</span>
+<span class="sd">        in each streamline.</span>
+<span class="sd">    n_points : int, optional</span>
+<span class="sd">        The number of points to resample to. *If the `bundle` is an array, this</span>
+<span class="sd">        input is ignored*. Default: 100.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    w : array of shape (n_streamlines, n_points)</span>
+<span class="sd">        Weights for each node in each streamline, calculated as its relative</span>
+<span class="sd">        inverse of the Mahalanobis distance, relative to the distribution of</span>
+<span class="sd">        coordinates at that node position across streamlines.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">bundle</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+        <span class="c1"># It&#39;s an array, go with it:</span>
+        <span class="n">n_points</span> <span class="o">=</span> <span class="n">bundle</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># It&#39;s something else, assume that it needs to be resampled:</span>
+        <span class="n">bundle</span> <span class="o">=</span> <span class="n">_resample_bundle</span><span class="p">(</span><span class="n">bundle</span><span class="p">,</span> <span class="n">n_points</span><span class="p">)</span>
+    <span class="n">w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">bundle</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">n_points</span><span class="p">))</span>
+
+    <span class="c1"># If there&#39;s only one fiber here, it gets the entire weighting:</span>
+    <span class="k">if</span> <span class="n">bundle</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">return_mahalnobis</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">])</span>
+
+    <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">bundle</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+        <span class="c1"># This should come back as a 3D covariance matrix with the spatial</span>
+        <span class="c1"># variance covariance of this node across the different streamlines</span>
+        <span class="c1"># This is a 3-by-3 array:</span>
+        <span class="n">node_coords</span> <span class="o">=</span> <span class="n">bundle</span><span class="p">[:,</span> <span class="n">node</span><span class="p">]</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cov</span><span class="p">(</span><span class="n">node_coords</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">ddof</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">c</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">c</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">c</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">]],</span>
+                      <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">c</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">c</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]],</span>
+                      <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">c</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">]]])</span>
+        <span class="c1"># Calculate the mean or median of this node as well</span>
+        <span class="c1"># delta = node_coords - np.mean(node_coords, 0)</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">node_coords</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="c1"># Weights are the inverse of the Mahalanobis distance</span>
+        <span class="k">for</span> <span class="n">fn</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">bundle</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+            <span class="c1"># calculate Mahalanobis for node on fiber[fn]</span>
+            <span class="n">w</span><span class="p">[</span><span class="n">fn</span><span class="p">,</span> <span class="n">node</span><span class="p">]</span> <span class="o">=</span> <span class="n">mahalanobis</span><span class="p">(</span><span class="n">node_coords</span><span class="p">[</span><span class="n">fn</span><span class="p">],</span> <span class="n">m</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">c</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">return_mahalnobis</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">w</span>
+    <span class="c1"># weighting is inverse to the distance (the further you are, the less you</span>
+    <span class="c1"># should be weighted)</span>
+    <span class="n">w</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">w</span>
+    <span class="c1"># Normalize before returning, so that the weights in each node sum to 1:</span>
+    <span class="k">return</span> <span class="n">w</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">split_streamlines</span><span class="p">(</span><span class="n">streamlines</span><span class="p">,</span> <span class="n">template</span><span class="p">,</span> <span class="n">low_coord</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Classify streamlines and split sl passing the mid-point below some height.</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    streamlines : list or Streamlines class instance.</span>
+<span class="sd">    template : nibabel.Nifti1Image class instance</span>
+<span class="sd">        An affine transformation into a template space.</span>
+<span class="sd">    low_coords: int</span>
+<span class="sd">        How many coordinates below the 0,0,0 point should a streamline be to</span>
+<span class="sd">        be split if it passes the midline.</span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    streamlines that have been processed, a boolean array of whether they</span>
+<span class="sd">    cross the midline or not, a boolean array that for those who do not cross</span>
+<span class="sd">    designates whether they are strictly in the left hemisphere, and a boolean</span>
+<span class="sd">    that tells us whether the streamline has superior-inferior parts that pass</span>
+<span class="sd">    below `low_coord` steps below the middle of the image (which should also</span>
+<span class="sd">    be `low_coord` mms for templates with 1 mm resolution)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># What is the x,y,z coordinate of 0,0,0 in the template space?</span>
+    <span class="n">zero_coord</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">template</span><span class="o">.</span><span class="n">affine</span><span class="p">),</span>
+                        <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]))</span>
+
+    <span class="c1"># cross_below = zero_coord[2] - low_coord</span>
+    <span class="n">crosses</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">streamlines</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+    <span class="c1"># already_split = 0</span>
+    <span class="k">for</span> <span class="n">sl_idx</span><span class="p">,</span> <span class="n">sl</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">streamlines</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">sl</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">zero_coord</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="ow">and</span> \
+           <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">sl</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">zero_coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+            <span class="c1"># if np.any(sl[:, 2] &lt; cross_below):</span>
+            <span class="c1">#     # This is a streamline that needs to be split where it</span>
+            <span class="c1">#     # crosses the midline:</span>
+            <span class="c1">#     split_idx = np.argmin(np.abs(sl[:, 0] - zero_coord[0]))</span>
+            <span class="c1">#     streamlines = aus.split_streamline(</span>
+            <span class="c1">#         streamlines, sl_idx + already_split, split_idx)</span>
+            <span class="c1">#     already_split = already_split + 1</span>
+            <span class="c1">#     # Now that it&#39;s been split, neither cross the midline:</span>
+            <span class="c1">#     crosses[sl_idx] = False</span>
+            <span class="c1">#     crosses = np.concatenate([crosses[:sl_idx+1],</span>
+            <span class="c1">#                               np.array([False]),</span>
+            <span class="c1">#                               crosses[sl_idx+1:]])</span>
+            <span class="c1"># else:</span>
+                <span class="n">crosses</span><span class="p">[</span><span class="n">sl_idx</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">crosses</span><span class="p">[</span><span class="n">sl_idx</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="c1"># Move back to the original space:</span>
+    <span class="k">return</span> <span class="n">streamlines</span><span class="p">,</span> <span class="n">crosses</span>
+
+
+<span class="k">def</span> <span class="nf">_check_sl_with_inclusion</span><span class="p">(</span><span class="n">sl</span><span class="p">,</span> <span class="n">include_rois</span><span class="p">,</span> <span class="n">tol</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Helper function to check that a streamline is close to a list of</span>
+<span class="sd">    inclusion ROIS.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">dist</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">roi</span> <span class="ow">in</span> <span class="n">include_rois</span><span class="p">:</span>
+        <span class="n">dist</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cdist</span><span class="p">(</span><span class="n">sl</span><span class="p">,</span> <span class="n">roi</span><span class="p">,</span> <span class="s1">&#39;euclidean&#39;</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">dist</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">&gt;</span> <span class="n">tol</span><span class="p">:</span>
+            <span class="c1"># Too far from one of them:</span>
+            <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="p">[]</span>
+    <span class="c1"># Apparently you checked all the ROIs and it was close to all of them</span>
+    <span class="k">return</span> <span class="kc">True</span><span class="p">,</span> <span class="n">dist</span>
+
+
+<span class="k">def</span> <span class="nf">_check_sl_with_exclusion</span><span class="p">(</span><span class="n">sl</span><span class="p">,</span> <span class="n">exclude_rois</span><span class="p">,</span> <span class="n">tol</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Helper function to check that a streamline is not too close to a list</span>
+<span class="sd">    of exclusion ROIs.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">for</span> <span class="n">roi</span> <span class="ow">in</span> <span class="n">exclude_rois</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">cdist</span><span class="p">(</span><span class="n">sl</span><span class="p">,</span> <span class="n">roi</span><span class="p">,</span> <span class="s1">&#39;euclidean&#39;</span><span class="p">))</span> <span class="o">&lt;</span> <span class="n">tol</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+    <span class="c1"># Either there are no exclusion ROIs, or you are not close to any:</span>
+    <span class="k">return</span> <span class="kc">True</span>
+
+
+<div class="viewcode-block" id="segment"><a class="viewcode-back" href="../../autoapi/AFQ/segmentation/index.html#AFQ.segmentation.segment">[docs]</a><span class="k">def</span> <span class="nf">segment</span><span class="p">(</span><span class="n">fdata</span><span class="p">,</span> <span class="n">fbval</span><span class="p">,</span> <span class="n">fbvec</span><span class="p">,</span> <span class="n">streamlines</span><span class="p">,</span> <span class="n">bundle_dict</span><span class="p">,</span> <span class="n">b0_threshold</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+            <span class="n">reg_template</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">mapping</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">prob_threshold</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">reg_kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Segment streamlines into bundles based on inclusion ROIs.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    fdata, fbval, fbvec : str</span>
+<span class="sd">        Full path to data, bvals, bvecs</span>
+
+<span class="sd">    streamlines : list of 2D arrays</span>
+<span class="sd">        Each array is a streamline, shape (3, N).</span>
+
+<span class="sd">    bundle_dict: dict</span>
+<span class="sd">        The format is something like::</span>
+
+<span class="sd">            {&#39;name&#39;: {&#39;ROIs&#39;:[img1, img2],</span>
+<span class="sd">            &#39;rules&#39;:[True, True]},</span>
+<span class="sd">            &#39;prob_map&#39;: img3,</span>
+<span class="sd">            &#39;cross_midline&#39;: False}</span>
+
+<span class="sd">    reg_template : str or nib.Nifti1Image, optional.</span>
+<span class="sd">        Template to use for registration (defaults to the MNI T2)</span>
+
+<span class="sd">    mapping : DiffeomorphicMap object, str or nib.Nifti1Image, optional</span>
+<span class="sd">        A mapping between DWI space and a template. Defaults to generate</span>
+<span class="sd">        this.</span>
+
+<span class="sd">    prob_threshold : float.</span>
+<span class="sd">        Initial cleaning of fiber groups is done using probability maps from</span>
+<span class="sd">        [Hua2008]_. Here, we choose an average probability that needs to be</span>
+<span class="sd">        exceeded for an individual streamline to be retained. Default: 0.</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    .. [Hua2008] Hua K, Zhang J, Wakana S, Jiang H, Li X, et al. (2008)</span>
+<span class="sd">       Tract probability maps in stereotaxic spaces: analyses of white</span>
+<span class="sd">       matter anatomy and tract-specific quantification. Neuroimage 39:</span>
+<span class="sd">       336-347</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">img</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">gtab</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">prepare_data</span><span class="p">(</span><span class="n">fdata</span><span class="p">,</span> <span class="n">fbval</span><span class="p">,</span> <span class="n">fbvec</span><span class="p">,</span>
+                                      <span class="n">b0_threshold</span><span class="o">=</span><span class="n">b0_threshold</span><span class="p">)</span>
+
+    <span class="n">tol</span> <span class="o">=</span> <span class="n">dts</span><span class="o">.</span><span class="n">dist_to_corner</span><span class="p">(</span><span class="n">img</span><span class="o">.</span><span class="n">affine</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">reg_template</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">reg_template</span> <span class="o">=</span> <span class="n">dpd</span><span class="o">.</span><span class="n">read_mni_template</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">mapping</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">mapping</span> <span class="o">=</span> <span class="n">reg</span><span class="o">.</span><span class="n">syn_register_dwi</span><span class="p">(</span><span class="n">fdata</span><span class="p">,</span> <span class="n">gtab</span><span class="p">,</span> <span class="n">template</span><span class="o">=</span><span class="n">reg_template</span><span class="p">,</span>
+                                       <span class="o">**</span><span class="n">reg_kwargs</span><span class="p">)</span>
+
+    <span class="c1"># Classify the streamlines and split those that: 1) cross the</span>
+    <span class="c1"># midline, and 2) pass under 10 mm below the mid-point of their</span>
+    <span class="c1"># representation in the template space:</span>
+    <span class="n">xform_sl</span><span class="p">,</span> <span class="n">crosses</span> <span class="o">=</span> <span class="n">split_streamlines</span><span class="p">(</span><span class="n">streamlines</span><span class="p">,</span> <span class="n">img</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">mapping</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">mapping</span><span class="p">,</span> <span class="n">nib</span><span class="o">.</span><span class="n">Nifti1Image</span><span class="p">):</span>
+        <span class="n">mapping</span> <span class="o">=</span> <span class="n">reg</span><span class="o">.</span><span class="n">read_mapping</span><span class="p">(</span><span class="n">mapping</span><span class="p">,</span> <span class="n">img</span><span class="p">,</span> <span class="n">reg_template</span><span class="p">)</span>
+
+    <span class="n">fiber_probabilities</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">xform_sl</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">bundle_dict</span><span class="p">)))</span>
+
+    <span class="c1"># For expedience, we approximate each streamline as a 100 point curve:</span>
+    <span class="n">fgarray</span> <span class="o">=</span> <span class="n">_resample_bundle</span><span class="p">(</span><span class="n">xform_sl</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+    <span class="n">streamlines_in_bundles</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">xform_sl</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">bundle_dict</span><span class="p">)))</span>
+    <span class="n">min_dist_coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">xform_sl</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">bundle_dict</span><span class="p">),</span> <span class="mi">2</span><span class="p">))</span>
+
+    <span class="n">fiber_groups</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">for</span> <span class="n">bundle_idx</span><span class="p">,</span> <span class="n">bundle</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">bundle_dict</span><span class="p">):</span>
+        <span class="n">rules</span> <span class="o">=</span> <span class="n">bundle_dict</span><span class="p">[</span><span class="n">bundle</span><span class="p">][</span><span class="s1">&#39;rules&#39;</span><span class="p">]</span>
+        <span class="n">include_rois</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">exclude_rois</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">rule_idx</span><span class="p">,</span> <span class="n">rule</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">rules</span><span class="p">):</span>
+            <span class="n">roi</span> <span class="o">=</span> <span class="n">bundle_dict</span><span class="p">[</span><span class="n">bundle</span><span class="p">][</span><span class="s1">&#39;ROIs&#39;</span><span class="p">][</span><span class="n">rule_idx</span><span class="p">]</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">roi</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+                <span class="n">roi</span> <span class="o">=</span> <span class="n">roi</span><span class="o">.</span><span class="n">get_data</span><span class="p">()</span>
+            <span class="n">warped_roi</span> <span class="o">=</span> <span class="n">auv</span><span class="o">.</span><span class="n">patch_up_roi</span><span class="p">(</span>
+                <span class="p">(</span><span class="n">mapping</span><span class="o">.</span><span class="n">transform_inverse</span><span class="p">(</span>
+                    <span class="n">roi</span><span class="p">,</span>
+                    <span class="n">interpolation</span><span class="o">=</span><span class="s1">&#39;linear&#39;</span><span class="p">))</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">rule</span><span class="p">:</span>
+                <span class="c1"># include ROI:</span>
+                <span class="n">include_rois</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">warped_roi</span><span class="p">))</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Exclude ROI:</span>
+                <span class="n">exclude_rois</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">warped_roi</span><span class="p">))</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+
+        <span class="n">crosses_midline</span> <span class="o">=</span> <span class="n">bundle_dict</span><span class="p">[</span><span class="n">bundle</span><span class="p">][</span><span class="s1">&#39;cross_midline&#39;</span><span class="p">]</span>
+
+        <span class="c1"># The probability map if doesn&#39;t exist is all ones with the same</span>
+        <span class="c1"># shape as the ROIs:</span>
+        <span class="n">prob_map</span> <span class="o">=</span> <span class="n">bundle_dict</span><span class="p">[</span><span class="n">bundle</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;prob_map&#39;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">roi</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">prob_map</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+            <span class="n">prob_map</span> <span class="o">=</span> <span class="n">prob_map</span><span class="o">.</span><span class="n">get_data</span><span class="p">()</span>
+        <span class="n">warped_prob_map</span> <span class="o">=</span> <span class="n">mapping</span><span class="o">.</span><span class="n">transform_inverse</span><span class="p">(</span><span class="n">prob_map</span><span class="p">,</span>
+                                                    <span class="n">interpolation</span><span class="o">=</span><span class="s1">&#39;nearest&#39;</span><span class="p">)</span>
+        <span class="n">fiber_probabilities</span> <span class="o">=</span> <span class="n">dts</span><span class="o">.</span><span class="n">values_from_volume</span><span class="p">(</span><span class="n">warped_prob_map</span><span class="p">,</span>
+                                                     <span class="n">fgarray</span><span class="p">)</span>
+        <span class="n">fiber_probabilities</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">fiber_probabilities</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">sl_idx</span><span class="p">,</span> <span class="n">sl</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">xform_sl</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">fiber_probabilities</span><span class="p">[</span><span class="n">sl_idx</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">prob_threshold</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">crosses_midline</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">crosses</span><span class="p">[</span><span class="n">sl_idx</span><span class="p">]:</span>
+                        <span class="c1"># This means that the streamline does</span>
+                        <span class="c1"># cross the midline:</span>
+                        <span class="k">if</span> <span class="n">crosses_midline</span><span class="p">:</span>
+                            <span class="c1"># This is what we want, keep going</span>
+                            <span class="k">pass</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="c1"># This is not what we want, skip to next streamline</span>
+                            <span class="k">continue</span>
+
+                <span class="n">is_close</span><span class="p">,</span> <span class="n">dist</span> <span class="o">=</span> <span class="n">_check_sl_with_inclusion</span><span class="p">(</span><span class="n">sl</span><span class="p">,</span> <span class="n">include_rois</span><span class="p">,</span>
+                                                          <span class="n">tol</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">is_close</span><span class="p">:</span>
+                    <span class="n">is_far</span> <span class="o">=</span> <span class="n">_check_sl_with_exclusion</span><span class="p">(</span><span class="n">sl</span><span class="p">,</span> <span class="n">exclude_rois</span><span class="p">,</span>
+                                                      <span class="n">tol</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">is_far</span><span class="p">:</span>
+                        <span class="n">min_dist_coords</span><span class="p">[</span><span class="n">sl_idx</span><span class="p">,</span> <span class="n">bundle_idx</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span>\
+                            <span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">dist</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">0</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                        <span class="n">min_dist_coords</span><span class="p">[</span><span class="n">sl_idx</span><span class="p">,</span> <span class="n">bundle_idx</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span>\
+                            <span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">dist</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">0</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                        <span class="n">streamlines_in_bundles</span><span class="p">[</span><span class="n">sl_idx</span><span class="p">,</span> <span class="n">bundle_idx</span><span class="p">]</span> <span class="o">=</span>\
+                            <span class="n">fiber_probabilities</span><span class="p">[</span><span class="n">sl_idx</span><span class="p">]</span>
+
+    <span class="c1"># Eliminate any fibers not selected using the plane ROIs:</span>
+    <span class="n">possible_fibers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">streamlines_in_bundles</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span>
+    <span class="n">xform_sl</span> <span class="o">=</span> <span class="n">xform_sl</span><span class="p">[</span><span class="n">possible_fibers</span><span class="p">]</span>
+    <span class="n">streamlines_in_bundles</span> <span class="o">=</span> <span class="n">streamlines_in_bundles</span><span class="p">[</span><span class="n">possible_fibers</span><span class="p">]</span>
+    <span class="n">min_dist_coords</span> <span class="o">=</span> <span class="n">min_dist_coords</span><span class="p">[</span><span class="n">possible_fibers</span><span class="p">]</span>
+    <span class="n">bundle_choice</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">streamlines_in_bundles</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># We do another round through, so that we can orient all the</span>
+    <span class="c1"># streamlines within a bundle in the same orientation with respect to</span>
+    <span class="c1"># the ROIs. This order is ARBITRARY but CONSISTENT (going from ROI0</span>
+    <span class="c1"># to ROI1).</span>
+    <span class="k">for</span> <span class="n">bundle_idx</span><span class="p">,</span> <span class="n">bundle</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">bundle_dict</span><span class="p">):</span>
+        <span class="n">select_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">bundle_choice</span> <span class="o">==</span> <span class="n">bundle_idx</span><span class="p">)</span>
+        <span class="c1"># Use a list here, because Streamlines don&#39;t support item assignment:</span>
+        <span class="n">select_sl</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">xform_sl</span><span class="p">[</span><span class="n">select_idx</span><span class="p">])</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">select_sl</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">fiber_groups</span><span class="p">[</span><span class="n">bundle</span><span class="p">]</span> <span class="o">=</span> <span class="n">dts</span><span class="o">.</span><span class="n">Streamlines</span><span class="p">([])</span>
+            <span class="c1"># There&#39;s nothing here, move to the next bundle:</span>
+            <span class="k">continue</span>
+
+        <span class="c1"># Sub-sample min_dist_coords:</span>
+        <span class="n">min_dist_coords_bundle</span> <span class="o">=</span> <span class="n">min_dist_coords</span><span class="p">[</span><span class="n">select_idx</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">select_sl</span><span class="p">)):</span>
+            <span class="n">min0</span> <span class="o">=</span> <span class="n">min_dist_coords_bundle</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="n">bundle_idx</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+            <span class="n">min1</span> <span class="o">=</span> <span class="n">min_dist_coords_bundle</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="n">bundle_idx</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">min0</span> <span class="o">&gt;</span> <span class="n">min1</span><span class="p">:</span>
+                <span class="n">select_sl</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">select_sl</span><span class="p">[</span><span class="n">idx</span><span class="p">][::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="c1"># Set this to nibabel.Streamlines object for output:</span>
+        <span class="n">select_sl</span> <span class="o">=</span> <span class="n">dts</span><span class="o">.</span><span class="n">Streamlines</span><span class="p">(</span><span class="n">select_sl</span><span class="p">)</span>
+        <span class="n">fiber_groups</span><span class="p">[</span><span class="n">bundle</span><span class="p">]</span> <span class="o">=</span> <span class="n">select_sl</span>
+
+    <span class="k">return</span> <span class="n">fiber_groups</span></div>
+
+
+<span class="k">def</span> <span class="nf">clean_fiber_group</span><span class="p">(</span><span class="n">streamlines</span><span class="p">,</span> <span class="n">n_points</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">clean_rounds</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+                      <span class="n">clean_threshold</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span> <span class="n">min_sl</span><span class="o">=</span><span class="mi">20</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Clean a segmented fiber group based on the Mahalnobis distance of</span>
+<span class="sd">    each streamline</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    streamlines : nibabel.Streamlines class instance. The streamlines</span>
+<span class="sd">        constituting a fiber group.</span>
+
+<span class="sd">    clean_rounds : int, optional. Number of rounds of cleaning based on</span>
+<span class="sd">        the Mahalanobis distance from the mean of extracted bundles.</span>
+<span class="sd">        Default: 5</span>
+
+<span class="sd">    clean_threshold : float, optional. Threshold of cleaning based on the</span>
+<span class="sd">        Mahalanobis distance (the units are standard deviations).</span>
+<span class="sd">        Default: 6.</span>
+
+<span class="sd">    min_sl : int Number of streamlines in a bundle under which we will</span>
+<span class="sd">       not bother with cleaning outliers.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    A nibabel.Streamlines class instance containing only the streamlines</span>
+<span class="sd">    that have a Mahalanobis distance smaller than `clean_threshold` from</span>
+<span class="sd">    the mean of each one of the nodes.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># We don&#39;t even bother if there aren&#39;t enough streamlines:</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">streamlines</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">min_sl</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">streamlines</span>
+
+    <span class="c1"># Resample once up-front:</span>
+    <span class="n">fgarray</span> <span class="o">=</span> <span class="n">_resample_bundle</span><span class="p">(</span><span class="n">streamlines</span><span class="p">,</span> <span class="n">n_points</span><span class="p">)</span>
+    <span class="c1"># Keep this around, so you can use it for indexing at the very end:</span>
+    <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">fgarray</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="c1"># This calculates the Mahalanobis for each streamline/node:</span>
+    <span class="n">w</span> <span class="o">=</span> <span class="n">gaussian_weights</span><span class="p">(</span><span class="n">fgarray</span><span class="p">,</span> <span class="n">return_mahalnobis</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="c1"># We&#39;ll only do this for clean_rounds</span>
+    <span class="n">rounds_elapsed</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">while</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">w</span> <span class="o">&gt;</span> <span class="n">clean_threshold</span><span class="p">)</span> <span class="ow">and</span>
+            <span class="n">rounds_elapsed</span> <span class="o">&lt;</span> <span class="n">clean_rounds</span> <span class="ow">and</span>
+            <span class="nb">len</span><span class="p">(</span><span class="n">streamlines</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">min_sl</span><span class="p">):</span>
+        <span class="c1"># Select the fibers that have Mahalanobis smaller than the</span>
+        <span class="c1"># threshold for all their nodes:</span>
+        <span class="n">idx_belong</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">w</span> <span class="o">&lt;</span> <span class="n">clean_threshold</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="n">idx</span><span class="p">[</span><span class="n">idx_belong</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)]</span>
+        <span class="c1"># Update by selection:</span>
+        <span class="n">fgarray</span> <span class="o">=</span> <span class="n">fgarray</span><span class="p">[</span><span class="n">idx_belong</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)]</span>
+        <span class="c1"># Repeat:</span>
+        <span class="n">w</span> <span class="o">=</span> <span class="n">gaussian_weights</span><span class="p">(</span><span class="n">fgarray</span><span class="p">,</span> <span class="n">return_mahalnobis</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">rounds_elapsed</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="c1"># Select based on the variable that was keeping track of things for us:</span>
+    <span class="k">return</span> <span class="n">streamlines</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../../index.html">
+    <img class="logo" src="../../_static/escience-logo.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation_guide.html">Installing <code class="docutils literal notranslate"><span class="pre">pyAFQ</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Using pyAFQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../auto_examples/index.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../autoapi/index.html">Sphinx AutoAPI Index</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Ariel Rokem.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.11</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

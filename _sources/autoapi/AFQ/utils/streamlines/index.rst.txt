@@ -1,0 +1,276 @@
+
+
+:mod:`AFQ.utils.streamlines`
+============================
+
+.. py:module:: AFQ.utils.streamlines
+
+
+
+
+
+
+
+Module Contents
+---------------
+
+
+
+
+
+
+.. function:: add_bundles(t1, t2)
+
+   
+   Combine two bundles, using the second bundles' affine and
+   data_per_streamline keys.
+
+
+   :Parameters:
+
+       **t1, t2** : nib.streamlines.Tractogram class instances
+           ..
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+   
+
+
+
+
+
+
+
+
+
+.. function:: read_trk(fname)
+
+   
+   Read from a .trk file, return streamlines and header
+
+
+   :Parameters:
+
+       **fname** : str
+           Full path to a trk file containing
+
+   :Returns:
+
+       **list** : list of streamlines (3D coordinates)
+           ..
+
+
+
+
+
+
+
+   .. rubric:: Notes
+
+   We assume that all streamlines are provided with the "rasmm" points_space.
+   That is, they have been transformed to the space reported by the affine
+   associated with the image from whence it came, and saved with this affine
+   (e.g., using `write_trk`).
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+   
+
+
+
+
+
+
+
+
+
+.. function:: write_trk(fname, streamlines, affine=None, shape=None)
+
+   
+   Write out a .trk file
+
+
+   :Parameters:
+
+       **fname** : str
+           Full path to save the file into
+
+       **streamlines** : list
+           A list of arrays of 3D coordinates
+
+       **affine** : array (4,4), optional.
+           An affine transformation associated with the streamlines. Defaults to
+           identity.
+
+       **shape** : 3-element tuple, optional
+           Spatial dimensions of an image associated with the streamlines.
+           Defaults to not be set in the file header.
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+   
+
+
+
+
+
+
+
+
+
+.. function:: bundles_to_tgram(bundles, bundle_dict, affine)
+
+   
+   Create a nibabel trk Tractogram object from bundles and their
+   specification.
+
+
+   :Parameters:
+
+       **bundles: dict**
+           Each item in the dict is the streamlines of a particular bundle.
+
+       **bundle_dict: dict**
+           A bundle specification dictionary. Each item includes in particular a
+           `uid` key that is a unique integer for that bundle.
+
+       **affine** : array
+           The affine_to_rasmm input to `nib.streamlines.Tractogram`
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+   
+
+
+
+
+
+
+
+
+
+.. function:: tgram_to_bundles(tgram, bundle_dict)
+
+   
+   Convert a nib.streamlines.Tractogram object to a dict with items
+   holding the streamlines in each bundle.
+
+
+   :Parameters:
+
+       **tgram** : nib.streamlines.Tractogram class instance.
+           Requires a data_per_streamline['bundle'][bundle_name]['uid'] attribute.
+
+       **bundle_dict: dict**
+           A bundle specification dictionary. Each item includes in particular a
+           `uid` key that is a unique integer for that bundle.
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+   
+
+
+
+
+
+
+
+
+
+.. function:: split_streamline(streamlines, sl_to_split, split_idx)
+
+   
+   Given a Streamlines object, split one of the underlying streamlines
+
+
+   :Parameters:
+
+       **streamlines** : a Streamlines class instance
+           The group of streamlines, one of which is being split.
+
+       **sl_to_split** : int
+           The index of the streamline that is being split
+
+       **split_idx** : int
+           Where is the streamline being split
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+   
+
+
+
+
+
+
+

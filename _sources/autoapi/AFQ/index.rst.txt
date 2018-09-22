@@ -1,0 +1,48 @@
+
+
+:mod:`AFQ`
+==========
+
+.. py:module:: AFQ
+
+
+Subpackages
+-----------
+.. toctree::
+   :titlesonly:
+   :maxdepth: 3
+
+   utils/index.rst
+   
+
+
+
+Submodules
+----------
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+
+   api/index.rst
+   
+   csd/index.rst
+   
+   data/index.rst
+   
+   dki/index.rst
+   
+   dti/index.rst
+   
+   registration/index.rst
+   
+   segmentation/index.rst
+   
+   tractography/index.rst
+   
+   viz/index.rst
+   
+
+
+
+
+

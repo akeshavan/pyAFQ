@@ -1,0 +1,145 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>AFQ.viz &#8212; AFQ 0.1 documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/gallery.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/autoapi.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <link rel="prev" title="AFQ.tractography" href="../tractography/index.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="module-AFQ.viz">
+<span id="afq-viz"></span><h1><a class="reference internal" href="#module-AFQ.viz" title="AFQ.viz"><code class="xref py py-mod docutils literal notranslate"><span class="pre">AFQ.viz</span></code></a><a class="headerlink" href="#module-AFQ.viz" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="AFQ.viz._inline_interact">
+<code class="descclassname">AFQ.viz.</code><code class="descname">_inline_interact</code><span class="sig-paren">(</span><em>ren</em>, <em>inline</em>, <em>interact</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/AFQ/viz.html#_inline_interact"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AFQ.viz._inline_interact" title="Permalink to this definition">¶</a></dt>
+<dd><p>Helper function to reuse across viz functions</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="AFQ.viz.visualize_bundles">
+<code class="descclassname">AFQ.viz.</code><code class="descname">visualize_bundles</code><span class="sig-paren">(</span><em>trk</em>, <em>affine_or_mapping=None</em>, <em>bundle=None</em>, <em>ren=None</em>, <em>color=None</em>, <em>inline=True</em>, <em>interact=False</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/AFQ/viz.html#visualize_bundles"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AFQ.viz.visualize_bundles" title="Permalink to this definition">¶</a></dt>
+<dd><p>Visualize bundles in 3D using VTK</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="AFQ.viz.visualize_roi">
+<code class="descclassname">AFQ.viz.</code><code class="descname">visualize_roi</code><span class="sig-paren">(</span><em>roi</em>, <em>affine_or_mapping=None</em>, <em>static_img=None</em>, <em>roi_affine=None</em>, <em>static_affine=None</em>, <em>reg_template=None</em>, <em>ren=None</em>, <em>color=None</em>, <em>inline=True</em>, <em>interact=False</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/AFQ/viz.html#visualize_roi"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AFQ.viz.visualize_roi" title="Permalink to this definition">¶</a></dt>
+<dd><p>Render a region of interest into a VTK viz as a volume</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="AFQ.viz.visualize_volume">
+<code class="descclassname">AFQ.viz.</code><code class="descname">visualize_volume</code><span class="sig-paren">(</span><em>volume</em>, <em>x=None</em>, <em>y=None</em>, <em>z=None</em>, <em>ren=None</em>, <em>inline=True</em>, <em>interact=False</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/AFQ/viz.html#visualize_volume"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AFQ.viz.visualize_volume" title="Permalink to this definition">¶</a></dt>
+<dd><p>Visualize a volume</p>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../../../index.html">
+    <img class="logo" src="../../../_static/escience-logo.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../../installation_guide.html">Installing <code class="docutils literal notranslate"><span class="pre">pyAFQ</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../usage.html">Using pyAFQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../auto_examples/index.html">Examples</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../../index.html">Sphinx AutoAPI Index</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../index.html"><code class="docutils literal notranslate"><span class="pre">AFQ</span></code></a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Sphinx AutoAPI Index</a><ul>
+  <li><a href="../index.html"><code class="docutils literal notranslate"><span class="pre">AFQ</span></code></a><ul>
+      <li>Previous: <a href="../tractography/index.html" title="previous chapter"><code class="docutils literal notranslate"><span class="pre">AFQ.tractography</span></code></a></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Ariel Rokem.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.11</a>
+      
+      |
+      <a href="../../../_sources/autoapi/AFQ/viz/index.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

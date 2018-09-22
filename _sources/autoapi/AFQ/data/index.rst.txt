@@ -1,0 +1,289 @@
+
+
+:mod:`AFQ.data`
+===============
+
+.. py:module:: AFQ.data
+
+
+
+
+
+
+
+Module Contents
+---------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. data:: fetch_callosum_templates
+   
+
+   
+
+
+
+
+
+
+
+
+
+.. function:: read_callosum_templates()
+
+   
+   Load AFQ callosum templates from file
+
+
+
+   :Returns:
+
+       **dict with: keys: names of template ROIs and values: nibabel Nifti1Image**
+           ..
+
+       **objects from each of the ROI nifti files.**
+           ..
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. data:: fetch_templates
+   
+
+   
+
+
+
+
+
+
+
+
+
+.. function:: read_templates()
+
+   
+   Load AFQ templates from file
+
+
+
+   :Returns:
+
+       **dict with: keys: names of template ROIs and values: nibabel Nifti1Image**
+           ..
+
+       **objects from each of the ROI nifti files.**
+           ..
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+   
+
+
+
+
+
+
+
+
+
+.. function:: fetch_hcp(subjects)
+
+   
+   Fetch HCP diffusion data and arrange it in a manner that resembles the
+   BIDS [R8494a6c36190-1]_ specification.
+
+
+   :Parameters:
+
+       **subjects** : list
+           Each item is an integer, identifying one of the HCP subjects
+
+   :Returns:
+
+       **dict with remote and local names of these files.**
+           ..
+
+
+
+
+
+
+
+   .. rubric:: Notes
+
+   To use this function, you need to have a file '~/.aws/credentials', that
+   includes a section:
+
+   [hcp]
+   AWS_ACCESS_KEY_ID=XXXXXXXXXXXXXXXX
+   AWS_SECRET_ACCESS_KEY=XXXXXXXXXXXXXXXX
+
+   The keys are credentials that you can get from HCP (see https://wiki.humanconnectome.org/display/PublicData/How+To+Connect+to+Connectome+Data+via+AWS)  # noqa
+
+   Local filenames are changed to match our expected conventions.
+
+   .. [R8494a6c36190-1] Gorgolewski et al. (2016). The brain imaging data structure,
+          a format for organizing and describing outputs of neuroimaging
+          experiments. Scientific Data, 3::160044. DOI: 10.1038/sdata.2016.44.
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. data:: fetch_stanford_hardi_tractography
+   
+
+   
+
+
+
+
+
+
+
+
+
+.. function:: read_stanford_hardi_tractography()
+
+   
+   ..
+       !! processed by numpydoc !!
+
+   
+
+
+
+
+
+
+
+
+
+.. function:: organize_stanford_data(path=None)
+
+   
+   Create the expected file-system structure for the Stanford HARDI data-set
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+   
+
+
+
+
+
+
+

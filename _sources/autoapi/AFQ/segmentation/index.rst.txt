@@ -1,0 +1,124 @@
+
+
+:mod:`AFQ.segmentation`
+=======================
+
+.. py:module:: AFQ.segmentation
+
+
+
+
+
+
+
+Module Contents
+---------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. function:: segment(fdata, fbval, fbvec, streamlines, bundle_dict, b0_threshold=0, reg_template=None, mapping=None, prob_threshold=0, **reg_kwargs)
+
+   
+   Segment streamlines into bundles based on inclusion ROIs.
+
+
+   :Parameters:
+
+       **fdata, fbval, fbvec** : str
+           Full path to data, bvals, bvecs
+
+       **streamlines** : list of 2D arrays
+           Each array is a streamline, shape (3, N).
+
+       **bundle_dict: dict**
+           The format is something like::
+           
+               {'name': {'ROIs':[img1, img2],
+               'rules':[True, True]},
+               'prob_map': img3,
+               'cross_midline': False}
+
+       **reg_template** : str or nib.Nifti1Image, optional.
+           Template to use for registration (defaults to the MNI T2)
+
+       **mapping** : DiffeomorphicMap object, str or nib.Nifti1Image, optional
+           A mapping between DWI space and a template. Defaults to generate
+           this.
+
+       **prob_threshold** : float.
+           Initial cleaning of fiber groups is done using probability maps from
+           [R03e71c6d7dc6-Hua2008]_. Here, we choose an average probability that needs to be
+           exceeded for an individual streamline to be retained. Default: 0.
+
+
+
+
+
+
+
+
+
+   .. rubric:: References
+
+   .. [R03e71c6d7dc6-Hua2008] Hua K, Zhang J, Wakana S, Jiang H, Li X, et al. (2008)
+      Tract probability maps in stereotaxic spaces: analyses of white
+      matter anatomy and tract-specific quantification. Neuroimage 39:
+      336-347
+
+   .. only:: latex
+
+      [R03e71c6d7dc6-Hua2008]_
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+   
+
+
+
+
+
+
+
+
+
+
+

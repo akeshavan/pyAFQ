@@ -1,0 +1,83 @@
+
+
+:mod:`AFQ.csd`
+==============
+
+.. py:module:: AFQ.csd
+
+
+
+
+
+
+
+Module Contents
+---------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. function:: fit_csd(data_files, bval_files, bvec_files, mask=None, response=None, sh_order=8, lambda_=1, tau=0.1, out_dir=None)
+
+   
+   Fit the CSD model and save file with SH coefficients.
+
+
+   :Parameters:
+
+       **data_files** : str or list
+           Files containing DWI data. If this is a str, that's the full path to a
+           single file. If it's a list, each entry is a full path.
+
+       **bval_files** : str or list
+           Equivalent to `data_files`.
+
+       **bvec_files** : str or list
+           Equivalent to `data_files`.
+
+       **mask** : ndarray, optional
+           Binary mask, set to True or 1 in voxels to be processed.
+           Default: Process all voxels.
+
+       **out_dir** : str, optional
+           A full path to a directory to store the maps that get computed.
+           Default: file with coefficients gets stored in the same directory as
+           the first DWI file in `data_files`.
+
+   :Returns:
+
+       **fname** : the full path to the file containing the SH coefficients.
+           ..
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+   
+
+
+
+
+
+
+

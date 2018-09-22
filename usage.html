@@ -1,0 +1,234 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Using pyAFQ &#8212; AFQ 0.1 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="_static/gallery.css" />
+    <link rel="stylesheet" type="text/css" href="_static/autoapi.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Examples" href="auto_examples/index.html" />
+    <link rel="prev" title="Installing pyAFQ" href="installation_guide.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="using-pyafq">
+<h1>Using pyAFQ<a class="headerlink" href="#using-pyafq" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="organizing-your-data">
+<h2>Organizing your data<a class="headerlink" href="#organizing-your-data" title="Permalink to this headline">¶</a></h2>
+<p>The pyAFQ software assumes that your data is organized according to a format
+that emulates the <a class="reference external" href="http://bids.neuroimaging.io/">BIDS</a> format.</p>
+<p>Preprocessed diffusion MRI data, as well as anatomical and segmentation data
+should be organized as follows:</p>
+<div class="line-block">
+<div class="line">study</div>
+<div class="line-block">
+<div class="line">├-derivatives</div>
+<div class="line-block">
+<div class="line">├-preafq</div>
+<div class="line-block">
+<div class="line">├── sub01</div>
+<div class="line">│&nbsp;&nbsp; ├── sess01</div>
+<div class="line">│&nbsp;&nbsp; │   ├── anat</div>
+<div class="line">│&nbsp;&nbsp; │   │   ├── sub-01_sess-01_aparc+aseg.nii.gz</div>
+<div class="line">│&nbsp;&nbsp; │   │&nbsp;&nbsp; └── sub-01_sess-01_T1.nii.gz</div>
+<div class="line">│&nbsp;&nbsp; │   └── dwi</div>
+<div class="line">│&nbsp;&nbsp; │       ├── sub-01_sess-01_dwi.bvals</div>
+<div class="line">│&nbsp;&nbsp; │       ├── sub-01_sess-01_dwi.bvecs</div>
+<div class="line">│&nbsp;&nbsp; │       └── sub-01_sess-01_dwi.nii.gz</div>
+<div class="line">│&nbsp;&nbsp; └── sess02</div>
+<div class="line">│&nbsp;&nbsp;     ├── anat</div>
+<div class="line">│&nbsp;    &nbsp; │   ├── sub-01_sess-02_aparc+aseg.nii.gz</div>
+<div class="line">│&nbsp;&nbsp;     │&nbsp;&nbsp; └── sub-01_sess-02_T1w.nii.gz</div>
+<div class="line">│&nbsp;&nbsp;     └── dwi</div>
+<div class="line">│&nbsp;&nbsp;         ├── sub-01_sess-02_dwi.bvals</div>
+<div class="line">│&nbsp;&nbsp;         ├── sub-01_sess-02_dwi.bvecs</div>
+<div class="line">│&nbsp;&nbsp;         └── sub-01_sess-02_dwi.nii.gz</div>
+<div class="line">└── sub02</div>
+<div class="line">&nbsp;&nbsp; ├── sess01</div>
+<div class="line">&nbsp;&nbsp; │   ├── anat</div>
+<div class="line">&nbsp;&nbsp; │       ├── sub-02_sess-01_aparc+aseg.nii.gz</div>
+<div class="line">&nbsp;&nbsp; │   │&nbsp;&nbsp; └── sub-02_sess-01_T1w.nii.gz</div>
+<div class="line">&nbsp;&nbsp; │   └── dwi</div>
+<div class="line">&nbsp;&nbsp; │       ├── sub-02_sess-01_dwi.bvals</div>
+<div class="line">&nbsp;&nbsp; │       ├── sub-02_sess-01_dwi.bvecs</div>
+<div class="line">&nbsp;&nbsp; │       └── sub-02_sess-01_dwi.nii.gz</div>
+<div class="line">&nbsp;&nbsp; └── sess02</div>
+<div class="line">&nbsp;&nbsp;     ├── anat</div>
+<div class="line-block">
+<div class="line">│   ├── sub-02_sess-02_aparc+aseg.nii.gz</div>
+</div>
+<div class="line">&nbsp;&nbsp;     │&nbsp;&nbsp; └── sub-02_sess-02_T1w.nii.gz</div>
+<div class="line">&nbsp;&nbsp;     └── dwi</div>
+<div class="line">&nbsp;&nbsp;         ├── sub-02_sess-02_dwi.bvals</div>
+<div class="line">&nbsp;&nbsp;         ├── sub-02_sess-02_dwi.bvecs</div>
+<div class="line">&nbsp;&nbsp;         └── sub-02_sess-02_dwi.nii.gz</div>
+</div>
+</div>
+</div>
+</div>
+<p>Where the <cite>raw</cite> directory contains your raw data, and the <cite>preafq</cite> directory
+contains data that has been processed to be motion-corrected, eddy-current
+corrected and so on. Anatomical data is optional. If a T1-weighted anatomical
+image and its segmentation are not provided (i.e., there is no <cite>anat</cite> folder),
+the software will use the diffusion data to estimate the parts of the image that
+comprise the white matter.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The structure within the <cite>raw</cite> directory doesn’t matter much to the <cite>pyAFQ</cite>
+software, as the software will not touch this data at all.</p>
+</div>
+<p>As part of its operation, the software will create another directory, under
+<cite>study/derivatives/afq</cite>, which will contain all of the derivatives created by
+the software.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">As the BIDS format for derivatives matures, we intend to update the pyAFQ
+software to support a fully BIDS-compliant set of derivatives. Both as
+inputs, as well as outputs.</p>
+</div>
+</div>
+<div class="section" id="running-the-pyafq-pipeline">
+<h2>Running the pyAFQ pipeline<a class="headerlink" href="#running-the-pyafq-pipeline" title="Permalink to this headline">¶</a></h2>
+<p><cite>pyAFQ</cite> provides a programmatic application programming interface that can
+be used to integrate pyAFQ functionality into Python programs or into
+interactive analysis sessions (e.g., using
+<a class="reference external" href="https://jupyter.org">Jupyter</a> notebooks). Examples of using the API are
+provided in the <a class="reference external" href="https://docs.python.org/3/distutils/examples.html#examples" title="(in Python v3.7)"><span>Examples</span></a> documentation section.</p>
+<p>In addition, pyAFQ provides a command-line interface. After installing the
+software, and organizing the data, run:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pyAFQ</span> <span class="o">&lt;</span><span class="n">preafq_path</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<p>pointing the program to the location of the <cite>preafq</cite> folder. This will
+run whole-brain tractography, segment the tracts, and extract tract-profiles
+for each tract, generating a CSV file under
+<cite>study/derivatives/afq/tract_profiles.csv</cite> that contains the tract profiles
+for all participants/tracts/statistics</p>
+<p>The CLI has several additional optional inputs:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>-s SUB_PREFIX, --sub_prefix SUB_PREFIX
+                      Subject prefix (default: &#39;sub&#39;)
+-d DWI_FOLDER, --dwi_folder DWI_FOLDER
+                      DWI folder (default: &#39;dwi&#39;)
+-f DWI_FILE, --dwi_file DWI_FILE
+                      DWI file pattern (default: &#39;*dwi&#39;)
+-a ANAT_FOLDER, --anat_folder ANAT_FOLDER
+                      Anat folder (default: &#39;anat&#39;)
+-t ANAT_FILE, --anat_file ANAT_FILE
+                      Anat file pattern (default: &#39;*T1w*&#39;)
+-g SEG_FILE, --seg_file SEG_FILE
+                      Segmentation file patter (default: &#39;*aparc+aseg*&#39;)
+-b B0_THRESHOLD, --b0_threshold B0_THRESHOLD
+                      B0 threshold (default: 0)
+-o ODF_MODEL, --odf_model ODF_MODEL
+                      ODF model (default: &#39;DTI&#39;)
+-r DIRECTIONS, --directions DIRECTIONS
+                      Tractography method (default: &#39;det&#39;)
+-n N_SEEDS, --n_seeds N_SEEDS
+                      Number of seeds (default: 2 per voxel)
+-m, --random_seeds    Whether to use a total of `n_seeds` random seeds
+                      instead of `n_seeds` per voxel (default: False)
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="index.html">
+    <img class="logo" src="_static/escience-logo.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation_guide.html">Installing <code class="docutils literal notranslate"><span class="pre">pyAFQ</span></code></a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Using pyAFQ</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#organizing-your-data">Organizing your data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#running-the-pyafq-pipeline">Running the pyAFQ pipeline</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="auto_examples/index.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="autoapi/index.html">Sphinx AutoAPI Index</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="installation_guide.html" title="previous chapter">Installing <code class="docutils literal notranslate"><span class="pre">pyAFQ</span></code></a></li>
+      <li>Next: <a href="auto_examples/index.html" title="next chapter">Examples</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Ariel Rokem.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.11</a>
+      
+      |
+      <a href="_sources/usage.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
